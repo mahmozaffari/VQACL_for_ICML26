@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Data, caches and run outputs
+datasets/
+h5_dataset/
+experiments/
+logs/
+wandb/
+
+# Model weights
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.safetensors
+*.h5
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store

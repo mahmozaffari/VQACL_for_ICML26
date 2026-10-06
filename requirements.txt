@@ -1,0 +1,10 @@
+# Install PyTorch for your CUDA version first (see README), then:
+#   pip install -r requirements.txt
+torch==2.7.1
+torchvision==0.22.1
+transformers==4.57.1
+h5py==3.14.0
+numpy==2.0.2
+pillow==11.3.0
+psutil==7.0.0
+tqdm==4.67.1
