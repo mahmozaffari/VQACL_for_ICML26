@@ -3,6 +3,8 @@
 **Mahsa Mozaffari, Hitesh Sapkota, Yu Kong, Xumin Liu, Qi Yu**
 ICML 2026 · [Paper](https://mahsamozaffari.com/wp-content/uploads/2026/05/ICML_2026.pdf)
 
+> **Note:** The preprocessed data and trained checkpoints will be made available soon.
+
 This repository contains the official PyTorch implementation of the paper.
 
 ## Overview
@@ -49,7 +51,7 @@ We evaluate on two benchmarks:
 - **VQA v2**, split into the 10 question-type tasks of [VQACL](https://github.com/zhangxi1997/VQACL) (Zhang et al., CVPR 2023).
 - **TDIUC**, under the two continual protocols of TRIPLET (Qian et al., ICCV 2023): CL-LS, with 5 question-type tasks (partition `Q`), and CL-VS, with 5 visual-category tasks (partition `V`).
 
-The preprocessed task splits and answer vocabularies for both benchmarks are available on [Google Drive](GOOGLE_DRIVE_LINK). Download them and extract them into `datasets/` so that they match the layout below. The scripts read question and answer files from `datasets/` and image caches from `h5_dataset/`. Both locations can be changed in `config/paths.sh`.
+The preprocessed task splits and answer vocabularies for both benchmarks will be made available soon. Once released, extract them into `datasets/` so that they match the layout below. The scripts read question and answer files from `datasets/` and image caches from `h5_dataset/`. Both locations can be changed in `config/paths.sh`.
 
 ```text
 datasets/
