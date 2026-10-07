@@ -45,7 +45,7 @@ python src/main_train.py \
     --warmup_steps $warmup_steps \
     --num_workers 4 \
     --persistent_workers \
-    --prefetch_factor 4 \
+    --prefetch_factor 2 \
     --freeze_base \
     --use_h5 \
     --h5_path $H5_PATH \

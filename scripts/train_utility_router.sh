@@ -54,7 +54,7 @@ python src/main_train.py \
     --gradient_accumulation_steps 2 \
     --num_workers 4 \
     --persistent_workers \
-    --prefetch_factor 4 \
+    --prefetch_factor 2 \
     --freeze_base \
     --use_h5 \
     --h5_path $H5_PATH \

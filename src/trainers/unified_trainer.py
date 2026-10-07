@@ -255,13 +255,13 @@ class UnifiedTrainer(BaseTrainer):
                 batch_size=getattr(self.args, 'test_batch_size', self.args.batch_size),
                 distributed=getattr(self.args, 'distributed', False),
                 gpu=getattr(self.args, 'gpu', 0),
-                workers=getattr(self.args, 'num_workers', 4),
+                workers=min(getattr(self.args, 'num_workers', 4), 2),  # test loaders for every task stay alive; keep them light
                 topk=getattr(self.args, 'test_topk', -1),
                 ans2label=ans2label,
                 task=task_name,
                 task_id=task_idx,
                 partition_name=getattr(self.args, 'partition_name', None),
-                persistent_workers=getattr(self.args, 'persistent_workers', False),
+                persistent_workers=False,
                 prefetch_factor=2, #getattr(self.args, 'prefetch_factor', 2),
                 pin_memory=getattr(self.args, 'pin_memory', True)
             )
@@ -304,13 +304,13 @@ class UnifiedTrainer(BaseTrainer):
                 batch_size=getattr(self.args, 'test_batch_size', self.args.batch_size),
                 distributed=getattr(self.args, 'distributed', False),
                 gpu=getattr(self.args, 'gpu', 0),
-                workers=getattr(self.args, 'num_workers', 4),
+                workers=min(getattr(self.args, 'num_workers', 4), 2),  # test loaders for every task stay alive; keep them light
                 topk=getattr(self.args, 'test_topk', -1),
                 task=task_name,
                 task_id=task_idx,
                 ans2label=ans2label,
                 partition_name=getattr(self.args, 'partition_name', None),
-                persistent_workers=getattr(self.args, 'persistent_workers', False),
+                persistent_workers=False,
                 prefetch_factor=getattr(self.args, 'prefetch_factor', 2),
                 pin_memory=getattr(self.args, 'pin_memory', True)
             )
@@ -436,7 +436,9 @@ class UnifiedTrainer(BaseTrainer):
             # 3. drop references
             del loader
 
-        # 4. run garbage-collection and clear CUDA cache
+        # 4. run garbage-collection and clear CUDA cache (get_loader_qlevel froze the heap
+        #    before forking workers; unfreeze so the released datasets can be reclaimed)
+        gc.unfreeze()
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -495,13 +497,13 @@ class UnifiedTrainer(BaseTrainer):
             batch_size=getattr(self.args, 'val_batch_size', self.args.batch_size),
             distributed=getattr(self.args, 'distributed', False),
             gpu=getattr(self.args, 'gpu', 0),
-            workers=getattr(self.args, 'num_workers', 4),  # Use fewer workers for validation
+            workers=min(getattr(self.args, 'num_workers', 4), 2),  # fewer, non-persistent workers for validation
             topk=getattr(self.args, 'val_topk', -1),
             ans2label=ans2label,
             task=task_name,
             task_id=task_idx,
             partition_name=getattr(self.args, 'partition_name', None),
-            persistent_workers=getattr(self.args, 'persistent_workers', False),
+            persistent_workers=False,
             prefetch_factor=getattr(self.args, 'prefetch_factor', 2),
             pin_memory=getattr(self.args, 'pin_memory', True)
         )

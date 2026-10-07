@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 import json
 import random
+import gc
 from multiprocessing import Pool
 import h5py
 import pickle
@@ -463,6 +464,13 @@ def get_loader_qlevel(processor, image_dir, args, coco_Ours, Examplar_set, _dset
     else:
         sampler = None
 
+    # DataLoader workers are forked from this process, which holds the parsed annotation
+    # JSONs and this task's items as millions of small Python objects. Freezing them keeps
+    # the workers' garbage collector from writing to every one of those objects, which
+    # would otherwise copy-on-write several GB of host RAM per worker.
+    gc.collect()
+    gc.freeze()
+
     if rest is not None:
         rest_sampler = DistributedSampler(rest) if distributed else None
         rest_loader = DataLoader(
@@ -506,6 +514,26 @@ def get_loader_qlevel(processor, image_dir, args, coco_Ours, Examplar_set, _dset
 
     return loader, total_num , dataset.num_answers, dataset.label2ans, rest_loader
 
+_GT_ANNOTATIONS = {}
+
+
+def load_gt_annotations(vqa_dir, train_file, val_file):
+    """Map question_id -> annotation for the train and val annotation files.
+
+    The files are several hundred MB each, so they are parsed once per process and the
+    same dictionary is shared by the train, val and test dataset objects (it is only read).
+    """
+    key = (str(vqa_dir), train_file, val_file)
+    if key not in _GT_ANNOTATIONS:
+        id2datum_gt = {}
+        for name in (train_file, val_file):
+            with open(Path(vqa_dir).joinpath(name)) as f:
+                for datum in json.load(f)['annotations']:
+                    id2datum_gt[datum['question_id']] = datum
+        _GT_ANNOTATIONS[key] = id2datum_gt
+    return _GT_ANNOTATIONS[key]
+
+
 class VQADataset:
     """
     A VQA data example in json file:
@@ -528,21 +556,8 @@ class VQADataset:
         self.name = splits
         self.splits = splits.split(',')
 
-        with open(self.vqa_dir.joinpath(f'v2_mscoco_train2014_annotations.json')) as f:
-            train2014_data = json.load(f)
-
-        with open(self.vqa_dir.joinpath(f'v2_mscoco_val2014_annotations.json')) as f:
-            val2014_data = json.load(f)
-
-        train2014_id2datum = {}
-        for datum in train2014_data['annotations']:
-            qid = datum['question_id']
-            train2014_id2datum[qid] = datum
-        val2014_id2datum = {}
-        for datum in val2014_data['annotations']:
-            qid = datum['question_id']
-            val2014_id2datum[qid] = datum
-        self.id2datum_gt = {**train2014_id2datum, **val2014_id2datum}
+        self.id2datum_gt = load_gt_annotations(
+            self.vqa_dir, 'v2_mscoco_train2014_annotations.json', 'v2_mscoco_val2014_annotations.json')
 
         # Loading datasets
         self.data = []
@@ -584,22 +599,8 @@ class TDIUCDataset(VQADataset):
         self.name = splits
         self.splits = splits.split(',')
 
-        with open(self.vqa_dir.joinpath('mscoco_train2014_annotations.json')) as f:
-            train2014_data = json.load(f)
-
-        with open(self.vqa_dir.joinpath('mscoco_val2014_annotations.json')) as f:
-            val2014_data = json.load(f)
-
-        train2014_id2datum = {}
-        for datum in train2014_data['annotations']:
-            qid = datum['question_id']
-            train2014_id2datum[qid] = datum
-        val2014_id2datum = {}
-        for datum in val2014_data['annotations']:
-            qid = datum['question_id']
-            val2014_id2datum[qid] = datum
-
-        self.id2datum_gt = {**train2014_id2datum, **val2014_id2datum}
+        self.id2datum_gt = load_gt_annotations(
+            self.vqa_dir, 'mscoco_train2014_annotations.json', 'mscoco_val2014_annotations.json')
         # Loading datasets
         self.data = []
         for split in self.splits:
