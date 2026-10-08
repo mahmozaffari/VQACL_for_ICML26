@@ -26,7 +26,7 @@ router_lr=1e-3
 router_epochs=5
 router_beta=0.1
 
-config_str="${RESUME_SUFFIX}EP${epochs}_mlpEP${router_epochs}_LR${lr}_mlpLR${router_lr}_beta${router_beta}_BS${bs}_LoRA${lora_r}_AMP"
+config_str="${RESUME_SUFFIX}${CONFIG_PREFIX}EP${epochs}_mlpEP${router_epochs}_LR${lr}_mlpLR${router_lr}_beta${router_beta}_BS${bs}_LoRA${lora_r}_AMP"
 output_dir="./experiments/${DATASET_DIR}/${MODEL}/utility_router/${tasks_seq_dir}/${config_str}"
 
 python src/main_train.py \
@@ -44,6 +44,7 @@ python src/main_train.py \
     --router_loss_type ACC \
     --use_lora \
     --lora_r $lora_r \
+    --lora_alpha $LORA_ALPHA \
     --train_split $TRAIN_SPLIT \
     --val_split $VAL_SPLIT \
     --test_split $TEST_SPLIT \

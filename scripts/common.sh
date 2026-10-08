@@ -82,3 +82,47 @@ if [[ -n "$RESUME_FROM" ]]; then
         RESUME_SUFFIX="RESUME_T${RESUME_TASK_IDX}_"
     fi
 fi
+
+# Expert-training preset, chosen with the CONFIG environment variable:
+#   release (default): 10 epochs, mixed precision, 50 warmup steps, early stopping. The
+#            settings the scripts shipped with.
+#   paper:   the settings of the runs behind the paper's tables: 20 epochs, 100 warmup steps,
+#            LoRA alpha 32; ViLT in full precision with 2-step gradient accumulation and no
+#            early stopping; FLAVA in mixed precision with an initial grad-scaler of 128
+#            (gradient accumulation 2 on VQA v2; 1, with early stopping, on TDIUC).
+#   sweep:   a later sweep that improved every table: 10 epochs, LoRA alpha 8 (equal to the
+#            rank), warmup over the first 10% of each task's steps, the summed VQA loss
+#            (--scale_vqa_loss), mixed precision, early stopping, batch 80 for ViLT.
+# The preset also fixes the LoRA alpha that the router scripts load the experts with, so use
+# the same CONFIG for stage 2. Runs of the paper and sweep presets are written under config
+# folders prefixed paper_ and sweep_.
+CONFIG="${CONFIG:-release}"
+ES_ARGS="--early_stopping --early_stopping_patience 5 --early_stopping_delta 0.001"
+case "$CONFIG" in
+    release)
+        EXP_EPOCHS=10; EXP_WARMUP=50; EXP_GRAD_ACC=1; LORA_ALPHA=32
+        if [[ "$MODEL" == "vilt" ]]; then EXP_BS=128; else EXP_BS=32; fi
+        EXP_AMP_ARGS="--use_amp"; EXP_ES_ARGS="$ES_ARGS"; EXP_LOSS_ARGS=""
+        CONFIG_PREFIX=""; EXP_TAG="AMP"
+        ;;
+    paper)
+        EXP_EPOCHS=20; EXP_WARMUP=100; LORA_ALPHA=32; EXP_LOSS_ARGS=""; CONFIG_PREFIX="paper_"
+        if [[ "$MODEL" == "vilt" ]]; then
+            EXP_BS=128; EXP_GRAD_ACC=2; EXP_AMP_ARGS=""; EXP_ES_ARGS=""; EXP_TAG="NoAMP_GA2"
+        elif [[ "$DATASET" == "vqa2" ]]; then
+            EXP_BS=32; EXP_GRAD_ACC=2; EXP_AMP_ARGS="--use_amp --init_grad_scaler 128"; EXP_ES_ARGS=""; EXP_TAG="AMP_GS128_GA2"
+        else
+            EXP_BS=32; EXP_GRAD_ACC=1; EXP_AMP_ARGS="--use_amp --init_grad_scaler 128"; EXP_ES_ARGS="$ES_ARGS"; EXP_TAG="AMP_GS128_ES"
+        fi
+        ;;
+    sweep)
+        # The trainer caps warmup at 10% of a task's steps, so a large value gives a 10% warmup.
+        EXP_EPOCHS=10; EXP_WARMUP=100000000; EXP_GRAD_ACC=1; LORA_ALPHA=8
+        if [[ "$MODEL" == "vilt" ]]; then EXP_BS=80; else EXP_BS=32; fi
+        EXP_AMP_ARGS="--use_amp"; EXP_ES_ARGS="$ES_ARGS"; EXP_LOSS_ARGS="--scale_vqa_loss"
+        CONFIG_PREFIX="sweep_"; EXP_TAG="a8_AMP_LS_WR0.1"
+        ;;
+    *)
+        echo "Error: CONFIG must be release, paper, or sweep (got '$CONFIG')"; exit 1
+        ;;
+esac

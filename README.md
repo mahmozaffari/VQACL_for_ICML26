@@ -111,7 +111,13 @@ The task-ID router ablation (`train_taskid_router.sh`) takes the same `EXPERT_CK
 
 Add `debug` as a fourth argument to train on a small subset of each task, for example `bash scripts/train_experts.sh vqa2 vilt Q debug`. To resume an interrupted run, pass the run directory and, optionally, the task index as the fifth and sixth arguments.
 
-### Hyperparameters
+**Configuration presets.** The `CONFIG` environment variable selects the expert-training settings. `CONFIG=paper` reproduces the runs behind the paper's tables: 20 epochs and 100 warmup steps, ViLT in full precision with 2-step gradient accumulation, FLAVA in mixed precision with an initial grad-scaler of 128. `CONFIG=sweep` uses a later sweep that improved every table: LoRA alpha 8, warmup over the first 10% of each task's steps, the summed VQA loss, and batch size 80 for ViLT. Without `CONFIG` the scripts use the defaults in the table below. Use the same `CONFIG` for stage 2, because it fixes the LoRA alpha the experts are loaded with; runs of the `paper` and `sweep` presets are written under config folders prefixed `paper_` and `sweep_`.
+
+```bash
+CONFIG=sweep bash scripts/train_experts.sh vqa2 vilt Q
+```
+
+### Hyperparameters (default preset)
 
 | | ViLT | FLAVA |
 |---|---|---|
